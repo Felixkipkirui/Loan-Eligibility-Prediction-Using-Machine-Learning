@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="UTF-8">
+    <title>Binex | User Data Entry Fom</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='dataform.css') }}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
+    <!-- Sweet alert Js -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+      .popup {
+          position: fixed;
+          top: 50%;
+          left: 50%;
+          transform: translate(-50%, -50%);
+          padding: 20px;
+          border-radius: 5px;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+          z-index: 9999;
+      }
+
+      .popup-Poor {
+          background-color: #ff6666;
+          color: white;
+      }
+      .popup-Standard {
+            background-color: #66b3ff;
+            color: white;
+        }
+
+      .popup-Good {
+          background-color: #66b3ff;
+          color: white;
+      }
+  </style>
+
+   </head>
+<body>
+  <div class="container">
+    <div class="title">Binex-MLP Loan Eligibility Form</div>
+    <div class="content">
+      <form id="loan-form" action="{{ url_for('predict') }}" method="post">
+        {% include "sweetalerts.html" %}
+        <div class="user-details">
+          <div class="input-box">
+            <span class="details"><label for="annual_income">Annual Income:</label></span>
+            <input type="number" id="annual_income" name="annual_income" required value="{{ session['annual'] }}" readonly>
+          </div>
+          <div class="input-box">
+            <span class="details"><label for="monthly_salary">Monthly Inhand Salary:</label></span>
+            <input type="number" id="monthly_salary" name="monthly_salary" value="{{ session['salary'] }}" required>
+          </div>  
+          <div class="input-box">
+            <span class="details"><label for="num_bank_accounts">Number of Bank Accounts:</label></span>
+            <input type="number" id="num_bank_accounts" name="num_bank_accounts" required value="{{ session['acc'] }}" readonly>
+          </div>
+          <div class="input-box">
+            <span class="details"><label for="num_credit_cards">Number of Credit Cards:</label></span>
+            <input type="number" id="num_credit_cards" name="num_credit_cards" required value="{{ session['card'] }}" readonly>
+          </div>
+          <div class="input-box">
+            <span class="details"><label for="interest_rate">Interest Rate:</label></span>
+            <input type="number" id="interest_rate" name="interest_rate" required value="5">
+          </div>
+          
+          <div class="input-box">
+            <span class="details"><label for="num_loans">Number of Loans:</label></span>
+            <input type="number" id="num_loans" name="num_loans" required value="{{ session['loans'] }}" readonly>
+          </div> 
+          <div class="input-box">
+            <span class="details"><label for="avg_days_delayed">Average Number of Days Delayed:</label></span>
+            <input type="number" id="avg_days_delayed" name="avg_days_delayed" required value="{{ session['avg'] }}" readonly>
+          </div>
+          <div class="input-box">
+            <span class="details"><label for="num_delayed_payments">Number of Delayed Payments:</label></span>
+            <input type="number" id="num_delayed_payments" name="num_delayed_payments" required value="{{ session['delayed'] }}" readonly>
+          </div>
+          <div class="input-box">
+            <span class="details"><label for="credit_mix">Credit Mix:</label></span>
+            <select id="credit_mix" name="credit_mix" required>
+              <option value="0">Bad</option>
+              <option value="1">Standard</option>
+              <option value="3">Good</option>
+          </select>
+          </div>
+        <div class="input-box">
+            <span class="details"><label for="outstanding_debt">Outstanding Debt:</label></span>
+            <input type="number" id="outstanding_debt" name="outstanding_debt" required value="{{ session['debt'] }}" readonly>
+          </div> 
+          <div class="input-box">
+            <span class="details"><label for="credit_history_age">Credit History Age:</label></span>
+            <input type="number" id="credit_history_age" name="credit_history_age" required value="{{ session['age'] }}" readonly>
+          </div>
+          <div class="input-box">
+            <span class="details"><label for="monthly_balance">Monthly Balance:</label></span>
+            <input type="number" id="monthly_balance" name="monthly_balance" required value="{{ session['monthly'] }}" readonly>
+          </div>
+        </div>
+        <div class="container">
+          <h2 class="mt-5">Loan Prediction Result</h2>
+          <div class="button show-modal">
+            <input type="button" value="Predict-Eligibility" onclick="predictEligibility()">
+          </div> 
+        </div> 
+      </div>
+      </form>
+     <!-- <div class="container">
+        <h1>Prediction Result</h1>
+        <div class="result">
+          {% if prediction %}
+          <p>Predicted Credit Score: {{ prediction }}</p>
+          <p>{{ message }}</p>
+          {% endif %}
+        </div>
+      </div> -->
+      <div id="popup" class="popup" style="display: none;"></div>
+
+      <script>
+        function showPopup(message, type) {
+            var popup = document.getElementById('popup');
+            popup.textContent = `${type}: ${message}`;
+            popup.classList.remove('popup-Poor', 'popup-Standard', 'popup-Good');
+            if (type === 'Poor') {
+                popup.classList.add('popup-Poor');
+            } else if (type === 'Standard') {
+                popup.classList.add('popup-Standard');
+            } else {
+                popup.classList.add('popup-Good');
+            }
+            popup.style.display = 'block';
+            setTimeout(function() {
+                popup.style.display = 'none';
+            }, 3000);
+        }
+    
+        function predictEligibility() {
+            var form = document.getElementById('loan-form');
+            var formData = new FormData(form);
+            fetch('/predict', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.popup_type === 'Poor') {
+                        window.location.href = "/failure"; // Use forward slashes
+                    } else {
+                        window.location.href = "/success"; // Use forward slashes
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+    </script>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-MrcW6ZMFYlzcLA8Nl+NtUVF0sA7MsXsP1UyJoMp4YLEuNSfAP+JcXn/tWtIaxVXM" crossorigin="anonymous"></script>
+</body>
+</html>
